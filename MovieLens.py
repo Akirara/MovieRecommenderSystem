@@ -8,16 +8,19 @@ from collections import defaultdict
 
 def load_reviews(path, **kwargs):
     """
-    Load Movielens reviews
+    Load MovieLens reviews
     """
     options = {
         'fieldnames': ('userid', 'movieid', 'rating', 'timestamp'),
         'delimiter': '\t'
     }
     options.update(kwargs)
-
-    parse_date = lambda r, k: datetime.datetime.fromtimestamp(float(r[k]))
-    parse_int = lambda r, k: int(r[k])
+    
+    def parse_date(r, k):
+        return datetime.datetime.fromtimestamp(float(r[k]))
+    
+    def parse_int(r, k):
+        return int(r[k])
 
     with open(path, 'r', encoding='utf-8') as reviews:
         reader = csv.DictReader(reviews, **options)
@@ -40,7 +43,7 @@ def relative_path(path):
 
 def load_movies(path, **kwargs):
     """
-    Load Movielens movies
+    Load MovieLens movies
     """
     options = {
         'fieldnames': ('movieid', 'title', 'release', 'video', 'url'),
@@ -49,8 +52,11 @@ def load_movies(path, **kwargs):
     }
     options.update(kwargs)
 
-    parse_int = lambda r, k: int(r[k])
-    parse_date = lambda r, k: datetime.datetime.strptime(r[k], '%d-%b-%Y') if r[k] else None
+    def parse_int(r, k):
+        return int(r[k])
+
+    def parse_date(r, k):
+        return datetime.datetime.strptime(r[k], '%d-%b-%Y') if r[k] else None
 
     with open(path, 'r', encoding='utf-8') as movies:
         reader = csv.DictReader(movies, **options)
