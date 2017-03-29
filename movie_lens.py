@@ -155,13 +155,18 @@ class MovieLens(object):
             )
         return reviews
 
-    def euclidean_distance(self, critic_a, critic_b):
+    def euclidean_distance(self, a, b, prefs='critics'):
         """
-        Return the Euclidean distance of two critics, A&B by performing a J-dimensional Euclidean
-        calculation of each of their preference vectors for the intersection of movies the critics
-        have rated
+        Return the Euclidean distance of two critics or two movies, A&B by performing a J-dimensional
+        Euclidean calculation of each of their preference vectors for the intersection of movies the
+        critics have rated
         """
-        preferences = self.shared_preferences(critic_a, critic_b)
+        if prefs == 'critics':
+            preferences = self.shared_preferences(a, b)
+        elif prefs == 'movies':
+            preferences = self.shared_critics(a, b)
+        else:
+            raise KeyError("Unknown preference type: '%s'" % prefs)
 
         if len(preferences) == 0:
             return 0
@@ -171,12 +176,18 @@ class MovieLens(object):
         # add 1 to prevent division by zero error
         return 1 / (1 + sqrt(sum_of_squares))
 
-    def pearson_correlation(self, critic_a, critic_b):
+    def pearson_correlation(self, a, b, prefs='critics'):
         """
-        Return the Pearson Correlation of two critics, A&B by performing the PPMC calculation on the scatter plot
-        of (a, b) ratings on the shared set of critiqued titles
+        Return the Pearson Correlation of two critics or two movies, A&B by performing the PPMC calculation on
+        the scatter plot of (a, b) ratings on the shared set of critiqued titles
         """
-        preferences = self.shared_preferences(critic_a, critic_b)
+        if prefs == 'critics':
+            preferences = self.shared_preferences(a, b)
+        elif prefs == 'movies':
+            preferences = self.shared_critics(a, b)
+        else:
+            raise KeyError("Unknown preference type: '%s'" % prefs)
+
         length = len(preferences)
 
         if length == 0:
@@ -223,7 +234,7 @@ class MovieLens(object):
             return heapq.nlargest(n, critics.items(), key=itemgetter(1))
         return critics
 
-    def predict_ranking(self, user, movie, metric='euclidean', critics=None):
+    def predict_ranking_user_based(self, user, movie, metric='euclidean', critics=None):
         """
         Predict the ranking a user might give a movie based on the weighted average of the
         critics similar to the user
@@ -248,12 +259,69 @@ class MovieLens(object):
         """
         critics = self.similar_critics(user, metric=metric)
         movies = {
-            movie: self.predict_ranking(user, movie, metric, critics) for movie in self.movies
+            movie: self.predict_ranking_user_based(user, movie, metric, critics) for movie in self.movies
         }
 
         if n:
             return heapq.nlargest(n, movies.items(), key=itemgetter(1))
         return movies
+
+    def shared_critics(self, movie_a, movie_b):
+        """
+        Return the intersection of critics for two items, A&B
+        """
+        if movie_a not in self.movies:
+            raise KeyError("Couldn't find movie '%s' in data" % movie_a)
+        if movie_b not in self.movies:
+            raise KeyError("Couldn't find movie '%s' in data" % movie_b)
+
+        critic_a = set(critic for critic in self.reviews if movie_a in self.reviews[critic])
+        critic_b = set(critic for critic in self.reviews if movie_b in self.reviews[critic])
+        shared = critic_a & critic_b
+
+        reviews = {}
+        for critic in shared:
+            reviews[critic] = (
+                self.reviews[critic][movie_a]['rating'],
+                self.reviews[critic][movie_b]['rating']
+            )
+        return reviews
+
+    def similar_items(self, movie, metric='euclidean', n=None):
+        metrics = {
+            'euclidean': self.euclidean_distance,
+            'pearson': self.pearson_correlation
+        }
+
+        distance = metrics.get(metric, None)
+
+        if movie not in self.reviews:
+            raise KeyError("Unknown movie, '%s'." % movie)
+        if not distance or not callable(distance):
+            raise KeyError("Unknown or unrealized distance metric '%s'" % metric)
+
+        items = {}
+        for item in self.movies:
+            if item != movie:
+                items[item] = distance(item, movie, prefs='movies')
+
+        if n:
+            return heapq.nlargest(n, items.items(), key=itemgetter(1))
+        return items
+
+    def predict_ranking_item_based(self, user, movie, metric='euclidean'):
+        movies = self.similar_items(movie, metric=metric)
+        total = 0.0
+        sim_sum = 0.0
+
+        for rel_movie, similarity in movies.items():
+            if rel_movie in self.reviews[user]:
+                total += similarity * self.reviews[user][rel_movie]['rating']
+                sim_sum += similarity
+
+        if sim_sum == 0.0:
+            return 0.0
+        return total / sim_sum
 
 
 if __name__ == "__main__":
@@ -265,8 +333,11 @@ if __name__ == "__main__":
     #     title = model.movies[mid]['title']
     #     print("[%0.3f average rating (%i reviews)] %s" % (avg, num, title))
 
-    # for item in model.similar_critics(232, 'pearson'):
+    # for item in model.similar_critics(232, 'euclidean', n=10):
     #     print("%4i: %0.3f" % item)
 
-    for mid, rating in model.predict_all_rankings(578, 'pearson', 10):
-        print("%0.3f: %s" % (rating, model.movies[mid]['title']))
+    # for mid, rating in model.predict_all_rankings(578, 'pearson', 10):
+    #     print("%0.3f: %s" % (rating, model.movies[mid]['title']))
+
+    # for movie, similarity in model.similar_items(631, 'pearson').items():
+    #     print("%0.3f: %s" % (similarity, model.movies[movie]['title']))
