@@ -4,7 +4,7 @@ A simple movie recommender system based on MovieLens dataset
 MovieLens dataset: https://grouplens.org/datasets/movielens/
 
 ## Introduction
-The movie recommender system implenments functions such as User-Based CF, Item-Based CF and SVD module 
+The movie recommender system implements functions such as User-Based CF, Item-Based CF and SVD module
 
 ### movie_lens
 The MovieLens class provides:
@@ -16,7 +16,7 @@ The MovieLens class provides:
 &#8195;(3)Ranking prediction
 
 ### recommender
-The Recommender class implenments prediction model based on SVD and model persistence
+The Recommender class implements prediction model based on SVD and model persistence
 
 ### svd
-Implenment matrix factorization using gradient descent
+Implement matrix factorization using gradient descent
