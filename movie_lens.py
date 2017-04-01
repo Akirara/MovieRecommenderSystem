@@ -1,10 +1,10 @@
-import os
 import csv
 import datetime
 import heapq
+import os
+from collections import defaultdict
 from math import sqrt
 from operator import itemgetter
-from collections import defaultdict
 
 
 def load_reviews(path, **kwargs):

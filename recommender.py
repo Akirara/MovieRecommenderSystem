@@ -1,6 +1,12 @@
-import numpy as np
-import movie_lens
+import heapq
 import pickle
+import time
+from operator import itemgetter
+
+import numpy as np
+
+import movie_lens
+import svd
 
 
 class Recommender(object):
@@ -11,7 +17,7 @@ class Recommender(object):
         self.reviews = None
 
         # Descriptive properties
-        self.build_path = None
+        self.build_start = None
         self.build_finish = None
         self.description = None
 
@@ -72,9 +78,41 @@ class Recommender(object):
         with open(pickle_path, 'wb') as pkl:
             pickle.dump(self, pkl)
 
+    def build(self, output=None):
+        """
+        Train the model by employing matrix factorization on training data set
+        """
+        options = {
+            'K': self.features,
+            'steps': self.steps,
+            'alpha': self.alpha,
+            'beta': self.beta
+        }
+
+        self.build_start = time.time()
+        P, Q = svd.factor(self.reviews, **options)
+        self.model = np.dot(P, Q.T)
+        self.build_finish = time.time()
+
+        if output:
+            self.dump(output)
+
+    def predict_ranking(self, user, movie):
+        uid = self.users.index(user)
+        mid = self.movies.index(movie)
+        if self.reviews[uid, mid] > 0:
+            return None
+        return self.model[uid, mid]
+
+    def top_rated(self, user, n=12):
+        movies = [(mid, self.predict_ranking(user, mid)) for mid in self.movies]
+        return heapq.nlargest(n, movies, key=itemgetter(1))
+
 
 if __name__ == "__main__":
-    data_path = "ml-100k/u.data"
-    model = Recommender(data_path)
-    print(model.sparsity())
-    print(model.density())
+    # data_path = "ml-100k/u.data"
+    # model = Recommender(data_path)
+    # model.build('record.pickle')
+    rec = Recommender.load('record.pickle')
+    for item in rec.top_rated(234):
+        print("%i: %0.3f" % item)
