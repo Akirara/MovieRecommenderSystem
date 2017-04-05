@@ -18,5 +18,11 @@ The MovieLens class provides:
 ### recommender
 The Recommender class implements prediction model based on SVD and model persistence
 
+Since it costs a lot of time to train the SVD model, you can use:
+
+    model = Recommender.load('record.pickle')
+
+to load the trained model directly 
+
 ### svd
 Implement matrix factorization using gradient descent
