@@ -101,7 +101,7 @@ class Recommender(object):
         uid = self.users.index(user)
         mid = self.movies.index(movie)
         if self.reviews[uid, mid] > 0:
-            return None
+            return 0
         return self.model[uid, mid]
 
     def top_rated(self, user, n=12):
